@@ -3,40 +3,61 @@
 **Explicit, deterministic symbolic memory for AI systems via MCP (Model
 Context Protocol).**
 
-SymbolicMemoryMCP provides a simple, reliable way for AI tools and
-agents to store and retrieve knowledge using stable symbols instead of
-hidden chat history or probabilistic recall.
+SymbolicMemoryMCP makes AI memory explicit: knowledge is stored by
+stable symbolic keys instead of hidden token state.
 
 ------------------------------------------------------------------------
 
-## ✨ Core Idea
+## 🚀 Why This Matters
 
-Instead of "AI memory" being implicit and unreliable, this system makes
-it:
+Most LLM workflows rely on implicit, probabilistic memory --- prompt
+windows, vector stores, heuristics.
 
--   Explicit
--   Deterministic
--   Persistent
--   AI‑agnostic
--   Structured
--   Alias‑aware
+SymbolicMemoryMCP provides:
+
+-   Deterministic recall\
+-   Stable symbolic addressing\
+-   Alias support\
+-   Structured taxonomy\
+-   MCP protocol interface\
+-   AI‑agnostic integration
+
+------------------------------------------------------------------------
+
+## 🧠 Core Concept
+
+Store knowledge explicitly:
+
+    HGI.DEF → "Hybrid General Intelligence = AI + human symbiosis"
+
+Retrieve deterministically:
+
+    sm_get("HGI.DEF")
 
 ------------------------------------------------------------------------
 
 ## ⚡ Quick Start
 
-### Start MCP Server
+### Install
+
+    pip install fastapi uvicorn pydantic requests
+
+### Run Server
 
     uvicorn server:app --host 127.0.0.1 --port 8000
 
+Endpoint:
+
+    http://127.0.0.1:8000/mcp
+
 ------------------------------------------------------------------------
 
-## 🧪 Smoke Test --- MCP Only
+## 🧪 Smoke Test --- MCP
 
 Save:
 
-    symbol = TEST.SMOKE
-    text = smoke ok
+    symbol: TEST.SMOKE
+    text: smoke ok
 
 Retrieve:
 
@@ -51,6 +72,12 @@ Retrieve:
 Expected:
 
     bridge ok
+
+------------------------------------------------------------------------
+
+## 🏗 Architecture
+
+    LLM → Bridge → MCP → Symbolic Memory Store
 
 ------------------------------------------------------------------------
 
