@@ -262,6 +262,33 @@ These are **ideas**, not claims about current features:
 - batch ops and export/import
 
 ---
+## Relationship to the JIT Symbolic Memory Design Pattern
+
+This repository is a **Proof of Concept (PoC)** implementation inspired by the **JIT Symbolic Memory** design pattern.
+
+It is important to understand the distinction:
+
+- The design pattern defines **architectural principles**.
+- This project demonstrates **one minimal technical realization** of those principles.
+
+The JIT Symbolic Memory document itself is explicitly conceptual and intentionally non-prescriptive. It does **not** describe an implementation, reference architecture, or technical specification.
+
+This repository therefore should be read as:
+
+> A practical illustration of how a deterministic symbolic memory layer can be built and integrated into an AI system using a simple protocol interface.
+
+It represents **one possible implementation path**, not the pattern itself.
+
+Different systems may implement the same architectural model using:
+
+- different storage technologies
+- different deployment environments
+- different protocol layers
+- different internal structures
+
+The purpose of this PoC is to make the architectural idea concrete, testable, and understandable in real-world system design.
+https://github.com/Th3Hypn0tist/random/blob/main/jit-symbolic-memory-design-pattern
+---
 
 ## License
 
