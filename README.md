@@ -1,304 +1,211 @@
 # SymbolicMemoryMCP
 
-**Explicit, deterministic symbolic memory for AI systems via MCP (Model Context Protocol).**
+**A Deterministic Symbolic Memory Layer for LLM Systems**
 
-SymbolicMemoryMCP turns “AI memory” from implicit, probabilistic recall into **explicit, addressable knowledge**:
-store text by stable **symbols** (e.g. `HGI.DEF`) and retrieve it deterministically.
+------------------------------------------------------------------------
 
----
+## Why This Exists
 
-## What this is (and isn’t)
+Most modern AI systems rely on probabilistic recall.
 
-**This is**
-- A small MCP server that provides **read/write** of curated “ground truth” snippets by symbol
-- A reference **bridge** showing how tool-calling LLMs can use MCP-backed symbolic memory
-- A workflow for **explicit definitions / invariants** that the LLM should not re-interpret
+They can retrieve similar information, but they cannot reliably:
 
-**This is not**
-- A vector store / fuzzy semantic memory
-- A full “knowledge base” with search, listing, or schema enforcement (see Roadmap)
+-   enforce invariants\
+-   guarantee factual grounding\
+-   provide auditability\
+-   separate truth from interpretation
 
----
+RAG improves retrieval, but it does not solve the core problem:
 
-## Why this matters
+> AI systems still lack a deterministic knowledge backbone.
 
-Most LLM systems “remember” through:
-- chat history (token-window limited)
-- RAG/vector memory (approximate + heuristic)
-- ad-hoc prompts (drift over time)
+This project demonstrates a minimal approach to solving that problem.
 
-SymbolicMemoryMCP provides a complementary layer:
-- **Deterministic recall** (no guessing)
-- **Stable references** (symbols don’t change unless you change them)
-- **Curated ground truth** (small, high-signal, human-verifiable)
+------------------------------------------------------------------------
 
-### Recommended pattern: Vector memory + Symbolic memory
-- **Vector memory**: broad, fuzzy, “memory trace”
-- **SymbolicMemoryMCP**: small, curated **invariants / definitions / policies** the agent must consult
+## What This Is
 
----
+**SymbolicMemoryMCP** is a Proof-of-Concept implementation of a
+deterministic symbolic memory layer for AI systems.
 
-## Symbol model
+It shows how knowledge can be:
 
-A **symbol** is a stable, human-readable key.
+-   stored explicitly as symbols\
+-   resolved deterministically\
+-   injected into AI workflows just-in-time\
+-   accessed through a simple protocol interface
 
-### Recommended naming rules (convention)
-- Uppercase segments separated by dots: `DOMAIN.SUBDOMAIN.NAME`
-- Use suffixes for types: `.DEF`, `.RULE`, `.CFG`, `.ENUM`, `.NOTE`
-- Prefer **few** stable roots rather than endless unique roots
+Instead of putting "memory inside the model", this approach treats
+memory as infrastructure.
 
-Examples:
-- `HGI.DEF` — definition
-- `USER.PREF.LANG` — user preference
-- `POLICY.SAFETY.NO_SHELL_EXEC` — invariant/policy
-- `PROJECT.SMMCP.ROADMAP.NOTE` — project note
+------------------------------------------------------------------------
 
-### Aliases
-Aliases are optional, natural-language-friendly keys that resolve to the same entry.
-Example: `aliases=["hgi","hybrid intelligence"]`
+## Core Idea
 
----
+Traditional AI memory works like this:
 
-## What operations exist today (v0.1.0)
+Memory → stored text → injected into prompt → interpreted
+probabilistically
 
-**Implemented**
-- `sm.texts.save` (MCP `tools/call`) — create/update a symbol with optional `cat`, `subcat`, `aliases`
-- `resource://sm/v1/texts/<symbol_or_alias>` (MCP `resources/read`) — retrieve by symbol **or alias**
-- Suggestion engine (when saving without taxonomy) — returns suggested `cat/subcat` (best-effort)
+Symbolic Memory works differently:
 
-**Not implemented (documented as ideas / roadmap)**
-- list, find-by-prefix (`HGI.*`), tags, batch ops
-- explicit alias management endpoints (set/remove)
-- versioning (`HGI.DEF@v2`) and alias pinning
-- structured payload schemas (JSON schema per symbol)
+Query → deterministic lookup → resolved ground truth → injected as
+context
 
-Keeping this v0.1.0 surface small is intentional: **boring core first**.
+The key distinction:
 
----
+> Memory is not stored context --- it is context resolved from ground
+> truth.
 
-## Storage & consistency
+------------------------------------------------------------------------
 
-Current reference implementation is SQLite-backed.
+## Architectural Role
 
-Practical guarantees (current scope):
-- Single-process server → operations are consistent within that process
-- SQLite provides transactional safety for individual writes
+This system operates at a different layer than typical AI memory
+solutions.
 
-Out of scope (for now):
-- multi-node replication
-- explicit migrations API
-- concurrent writers across multiple server instances
+  System Type                                      Role
+  ------------------------------------------------ -----------------------------------
+  Assistant memory (e.g. session/project memory)   Stores past context
+  RAG / vector databases                           Retrieve similar information
+  SymbolicMemoryMCP                                Provides deterministic invariants
 
----
+Symbolic Memory does not replace RAG or assistant memory.
 
-## How an LLM should use this in reasoning
+It complements them by acting as the system knowledge backbone.
 
-### Mental model
-Treat SymbolicMemoryMCP as **ground truth snapshots**:
-- definitions
-- invariants/policies
-- stable config values
-- “never reinterpret” facts
+------------------------------------------------------------------------
 
-### When to call `sm_get`
-Call `sm_get` whenever:
-- a term is important and must match a canonical meaning (`HGI`, `PrimeSL`, etc.)
-- a policy/invariant might constrain actions
-- the LLM is about to produce an answer where correctness depends on a fixed rule
-
-### When to call `sm_save`
-Call `sm_save` when:
-- the user provided an explicit definition/invariant and asked to store it
-- the system produced a curated “final” definition worth reusing
-- a stable preference/config was stated and should persist
-
-### Avoid “silent invention”
-If no symbol exists:
-- either ask the user to define it
-- or propose a symbol + definition explicitly and store it (with user confirmation in high-stakes systems)
-
----
-
-## Natural language → symbol key (naming layer)
-
-This is the main missing piece if you want the system to feel “non-manual”.
-
-**v0.1.0 approach (documented convention)**
-- Humans (or a “naming agent”) choose symbols once
-- LLM uses **aliases** to resolve natural language to the correct entry
-
-Example:
-- User asks: “What does hybrid intelligence mean here?”
-- LLM calls: `sm_get(symbol="hybrid intelligence")` → alias resolves to `HGI.DEF`
-
-### Naming agent (recommended architecture addon)
-Add a small “naming agent” whose job is:
-- propose a symbol for a new concept
-- attach aliases
-- keep the symbol space consistent across many agents
-
-This can be done without changing SymbolicMemoryMCP:
-- it’s just a policy/tooling layer in front of `sm_save`
-
----
-
-## Quick start
-
-### Install
-```bash
-pip install fastapi uvicorn pydantic requests
-```
-
-### Run server
-```bash
-uvicorn server:app --host 127.0.0.1 --port 8000
-```
-
-MCP endpoint:
-```text
-http://127.0.0.1:8000/mcp
-```
-
----
-
-## CLI examples (client.py)
-
-### Save a definition (DEFINE → store)
-```bash
-python client.py save \
-  --symbol HGI.DEF \
-  --text "Hybrid General Intelligence = AI + human symbiosis" \
-  --cat ai \
-  --subcat concepts.intelligence \
-  --aliases hgi "hybrid intelligence"
-```
-
-### Get by symbol
-```bash
-python client.py get --symbol HGI.DEF
-```
+## Deterministic vs Probabilistic Memory
 
-### Get by alias
-```bash
-python client.py get --symbol "hybrid intelligence"
-```
+A critical distinction:
 
----
+**Vector-based memory** - similarity-based - fuzzy recall -
+probabilistic resolution
 
-## Smoke tests
+**Symbolic memory** - identity-based - invariant - deterministic
+resolution
 
-### MCP-only smoke test
-```bash
-python tests_smoke.py
-```
+This enables AI systems to maintain a clear separation between:
 
-Expected:
-```text
-OK: smoke tests passed
-```
+-   reasoning (probabilistic)\
+-   facts (deterministic)
 
----
+------------------------------------------------------------------------
 
-## LLM bridge smoke test (Ollama)
+## Technology-Neutral by Design
 
-Start services:
-```bash
-uvicorn server:app --host 127.0.0.1 --port 8000
-ollama serve
-```
+This project demonstrates an architectural pattern, not a specific
+technology stack.
 
-Run:
-```bash
-python MCP2genericLLM.py \
-  --backend ollama \
-  --model llama3.1:8b \
-  --mcp-url http://127.0.0.1:8000/mcp \
-  --ollama-url http://127.0.0.1:11434/v1/chat/completions \
-  --strict-get \
-  --prompt "You MUST use tools. Save symbol TEST.BRIDGE with text 'bridge ok' in cat test subcat smoke.bridge and aliases ['bridge ok alias']. Then call sm_get using symbol TEST.BRIDGE."
-```
+The symbolic memory layer can be implemented using many storage
+backends:
 
-Expected:
-```text
-bridge ok
-```
+-   key-value stores\
+-   relational databases\
+-   graph databases\
+-   embedded storage\
+-   cloud or local environments
 
-### “Reasoning style” prompt template
-Use this to get consistent tool usage:
-```text
-You MUST use the tools.
-Before answering, resolve any important term via sm_get using either a symbol or a natural-language alias.
-If a needed invariant/definition is missing, propose a symbol and store it via sm_save with aliases.
-Then answer based strictly on the retrieved ground truth.
-```
+The PoC uses a minimal structure to illustrate the concept clearly.
 
----
+------------------------------------------------------------------------
 
-## Architecture
+## Relationship to JIT Symbolic Memory Design Pattern
 
-```text
-LLM / Agent
-  ↓ (tool calls)
-MCP2genericLLM (bridge)
-  ↓ (MCP JSON-RPC)
-SM-MCP server (FastAPI)
-  ↓
-SQLite (symbolic store)
-```
+This repository is a Proof of Concept inspired by the JIT Symbolic
+Memory design pattern.
 
-This is framework-neutral and fits agent ecosystems that can do tool calls (e.g. OpenClaw/MoltBot-style stacks).
+The design pattern itself is conceptual and intentionally
+non-prescriptive.
 
----
+This project represents:
 
-## Roadmap (documentation only)
+-   one minimal technical realization\
+-   not the pattern definition\
+-   not a reference architecture
 
-These are **ideas**, not claims about current features:
+Its purpose is to make the architectural idea concrete and testable.
 
-- `sm_list(cat?, subcat?)`
-- `sm_find_prefix(prefix="HGI.")`
-- explicit alias management (`alias_set`, `alias_remove`)
-- versioning (`HGI.DEF@v2`) + “current” alias pinning
-- typed payloads (JSON schema per symbol)
-- batch ops and export/import
+------------------------------------------------------------------------
 
----
-## Relationship to the JIT Symbolic Memory Design Pattern
+## Example Workflow (Conceptual)
 
-This repository is a **Proof of Concept (PoC)** implementation inspired by the **JIT Symbolic Memory** design pattern.
+1.  An AI system needs a known invariant.
+2.  It queries the symbolic memory layer via MCP.
+3.  The system resolves the symbol deterministically.
+4.  The resolved knowledge is injected into context.
+5.  The model reasons with grounded facts.
 
-It is important to understand the distinction:
+------------------------------------------------------------------------
 
-- The design pattern defines **architectural principles**.
-- This project demonstrates **one minimal technical realization** of those principles.
+## What This PoC Demonstrates
 
-The JIT Symbolic Memory document itself is explicitly conceptual and intentionally non-prescriptive. It does **not** describe an implementation, reference architecture, or technical specification.
+-   Deterministic symbolic lookup
+-   Separation of reasoning and truth layers
+-   Protocol-based knowledge access
+-   Minimal infrastructure footprint
 
-This repository therefore should be read as:
+It intentionally avoids complexity to keep the architectural role clear.
 
-> A practical illustration of how a deterministic symbolic memory layer can be built and integrated into an AI system using a simple protocol interface.
+------------------------------------------------------------------------
 
-It represents **one possible implementation path**, not the pattern itself.
+## What This Is NOT
 
-Different systems may implement the same architectural model using:
+This is not:
 
-- different storage technologies
-- different deployment environments
-- different protocol layers
-- different internal structures
+-   a full memory system
+-   a vector database alternative
+-   a knowledge graph framework
+-   a production-ready storage engine
 
-The purpose of this PoC is to make the architectural idea concrete, testable, and understandable in real-world system design.
-https://github.com/Th3Hypn0tist/random/blob/main/jit-symbolic-memory-design-pattern
----
+It is a minimal demonstration of an architectural missing layer.
+
+------------------------------------------------------------------------
+
+## The Larger Insight
+
+Modern AI stacks typically include:
+
+-   models
+-   vector retrieval
+-   prompt orchestration
+
+What is still missing is:
+
+> A deterministic knowledge layer that AI systems can rely on as ground
+> truth.
+
+SymbolicMemoryMCP illustrates how that layer can be implemented.
+
+------------------------------------------------------------------------
+
+## Status
+
+This is an early Proof-of-Concept intended for:
+
+-   experimentation
+-   architectural discussion
+-   integration exploration
+
+------------------------------------------------------------------------
 
 ## License
 
-Business Source License 1.1 (BUSL 1.1).  
-Free for private use. Paid for business use. Converts to open source after 3 years.
+BUSL (Business Source License) --- see LICENSE file for details.
 
-See `LICENSE.md`.
+------------------------------------------------------------------------
 
----
+## Contributing & Feedback
 
-## Author
+Discussion and experimentation are welcome.
 
-Aki Hirvilammi
+This project is primarily intended to explore the architectural role of
+deterministic symbolic memory in AI systems.
+
+------------------------------------------------------------------------
+
+**In short:**
+
+AI models reason probabilistically.\
+Systems still need something that is not.
