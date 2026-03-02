@@ -1,262 +1,143 @@
 # SymbolicMemoryMCP
 
-## A Deterministic Knowledge Layer for LLM Systems
+Explicit, deterministic symbolic memory for AI systems via MCP (Model
+Context Protocol).
 
-Most AI systems today rely on **probabilistic recall**.
+SymbolicMemoryMCP provides a small, focused MCP server that allows LLMs
+and agents to store and retrieve curated knowledge by stable symbolic
+keys instead of relying on probabilistic recall.
 
-They can retrieve similar information, but they cannot reliably:
+Repository contents:
 
-- enforce invariants  
-- guarantee factual grounding  
-- provide auditability  
-- separate truth from interpretation  
+-   server.py --- FastAPI-based MCP JSON-RPC server
+-   client.py --- CLI client for manual save/get workflows
+-   tests_smoke.py --- end-to-end MCP smoke tests
+-   MCP2genericLLM.py --- reference LLM bridge (tested with Ollama)
+-   LICENSE.md --- Business Source License (BUSL 1.1)
 
-RAG improves retrieval — but it does not solve the core problem:
+------------------------------------------------------------------------
 
-> **AI systems still lack a deterministic knowledge backbone.**
+CORE IDEA
 
-This project demonstrates a minimal approach to solving that gap.
+SYMBOL → Deterministic resolution → Text payload
 
----
+Example:
 
-## The Core Insight
+HGI.DEF → "Hybrid General Intelligence = AI + human symbiosis"
 
-Traditional AI memory works like this:
+An LLM retrieves this using sm_get instead of re-inventing definitions.
 
-```
-Store text → Inject into prompt → Model interprets probabilistically
-```
+------------------------------------------------------------------------
 
-Symbolic memory works differently:
+IMPLEMENTED MCP SURFACE (v0.1.0)
 
-```
-Query → Deterministic identity lookup → Resolve ground truth → Inject just‑in‑time
-```
+Save MCP method: tools/call Tool name: sm.texts.save
 
-The key distinction:
+Arguments example:
 
-> **Memory is not stored context.  
-> Memory is context resolved from ground truth.**
+{ "symbol": "HGI.DEF", "text": "Hybrid General Intelligence = AI + human
+symbiosis", "cat": "ai", "subcat": "concepts.intelligence", "aliases":
+\["hgi", "hybrid intelligence"\] }
 
----
+Retrieve MCP method: resources/read
 
-## What This Project Is
+URI: resource://sm/v1/texts/`<symbol_or_alias>`{=html}
 
-**SymbolicMemoryMCP** is a Proof‑of‑Concept implementation of a deterministic symbolic memory layer for AI systems.
+------------------------------------------------------------------------
 
-It shows how knowledge can be:
+INSTALLATION
 
-- represented explicitly as symbols  
-- resolved deterministically by identity  
-- accessed through a protocol interface (MCP)  
-- injected into AI workflows just‑in‑time  
+pip install fastapi uvicorn pydantic requests
 
-Instead of putting memory inside the model, this approach treats memory as **infrastructure**.
+------------------------------------------------------------------------
 
----
+RUN SERVER
 
-## Quick Usage Examples
+uvicorn server:app --host 127.0.0.1 --port 8000
 
-### 1. Store a Symbol
+Endpoint: http://127.0.0.1:8000/mcp
 
-```python
-from symbolic_memory import Memory
+------------------------------------------------------------------------
 
-mem = Memory()
-mem.put("RULE:MAX_TEMPERATURE", "Maximum safe temperature is 85°C")
-```
+MCP SMOKE TEST
 
-### 2. Deterministic Lookup
+python tests_smoke.py
 
-```python
-mem.get("RULE:MAX_TEMPERATURE")
-```
+Expected: OK: smoke tests passed
 
-Output:
+------------------------------------------------------------------------
 
-```
-Maximum safe temperature is 85°C
-```
+CLI EXAMPLES
 
-This lookup is:
+Save:
 
-- identity‑based  
-- deterministic  
-- invariant  
+python client.py save --symbol HGI.DEF --text "Hybrid General
+Intelligence = AI + human symbiosis" --cat ai --subcat
+concepts.intelligence --aliases hgi "hybrid intelligence"
 
----
+Get:
 
-### 3. JIT Injection into LLM Context
+python client.py get --symbol HGI.DEF
 
-```python
-rule = mem.get("RULE:MAX_TEMPERATURE")
+------------------------------------------------------------------------
 
-prompt = f"""
-Use the following verified system rule:
+LLM BRIDGE (OLLAMA)
 
-{rule}
+uvicorn server:app --port 8000 ollama serve
 
-Now answer:
-What is the maximum safe temperature?
-"""
-```
+python MCP2genericLLM.py --backend ollama --model llama3.1:8b --mcp-url
+http://127.0.0.1:8000/mcp --ollama-url
+http://127.0.0.1:11434/v1/chat/completions --strict-get --prompt "You
+MUST use tools. Save symbol TEST.BRIDGE with text 'bridge ok'. Then call
+sm_get using symbol TEST.BRIDGE."
 
-The model receives **resolved ground truth**, not probabilistic recall.
+Expected: bridge ok
 
----
+------------------------------------------------------------------------
 
-### 4. MCP Protocol Resolution Example
+HOW LLMs SHOULD USE THIS
 
-Example request:
+Call sm_get when: - A canonical definition is required - A
+policy/invariant constrains output
 
-```json
-{
-  "action": "resolve",
-  "symbol": "RULE:MAX_TEMPERATURE"
-}
-```
+Call sm_save when: - A stable definition or invariant must persist
 
-Response:
+Prompt template:
 
-```json
-{
-  "symbol": "RULE:MAX_TEMPERATURE",
-  "value": "Maximum safe temperature is 85°C"
-}
-```
+You MUST use tools. Resolve important terms via sm_get before answering.
+If missing, propose a symbol and store it via sm_save. Base final answer
+strictly on retrieved ground truth.
 
----
+------------------------------------------------------------------------
 
-## Architectural Role
+STORAGE
 
-This operates at a different layer than typical AI memory systems.
+-   SQLite backend
+-   Single-process transactional safety
+-   No distributed guarantees
 
-| Layer | Purpose |
-|------|---------|
-| Assistant memory | Stores session context |
-| Vector / RAG systems | Retrieve similar information |
-| **Symbolic Memory** | Provides deterministic invariants |
+------------------------------------------------------------------------
 
-Symbolic memory does not replace RAG or context memory.  
-It complements them by acting as the **system knowledge backbone**.
+ROADMAP (NOT IMPLEMENTED)
 
----
+-   Prefix search
+-   Versioning
+-   Alias management endpoints
+-   JSON-schema payloads
+-   Batch ops
 
-## Identity vs Similarity
+------------------------------------------------------------------------
 
-### Vector Memory
-- similarity‑based  
-- fuzzy recall  
-- probabilistic  
+LICENSE
 
-### Symbolic Memory
-- identity‑based  
-- invariant  
-- deterministic  
+Business Source License 1.1 (BUSL 1.1)
 
-This enables a clean separation between:
+-   Free for personal use
+-   Commercial use requires paid license
+-   Converts to open source after 3 years
 
-- probabilistic reasoning  
-- deterministic truth  
+See LICENSE.md.
 
----
+------------------------------------------------------------------------
 
-## What Makes This Deterministic
-
-Symbols resolve by identity — not similarity.
-
-This guarantees:
-
-- invariant grounding  
-- explicit knowledge boundaries  
-- reproducible resolution  
-- auditability  
-
-The system always knows **why** a fact was used.
-
----
-
-## Technology‑Neutral by Design
-
-The symbolic layer can be implemented using:
-
-- key‑value stores  
-- relational databases  
-- graph databases  
-- embedded storage  
-- cloud or local runtimes  
-
----
-
-## Relationship to the JIT Symbolic Memory Design Pattern
-
-This repository is a **Proof of Concept (PoC)** implementation inspired by the **JIT Symbolic Memory** design pattern.
-
-It is important to understand the distinction:
-
-- The design pattern defines **architectural principles**.  
-- This project demonstrates **one minimal technical realization** of those principles.
-
-The design pattern itself is conceptual and intentionally non‑prescriptive.
-
-Link to the design pattern:  
-https://github.com/Th3Hypn0tist/random/blob/main/jit-symbolic-memory-design-pattern
-
----
-
-## JIT Resolution Example
-
-1. AI needs a known invariant.  
-2. Queries symbolic layer via MCP.  
-3. Symbol resolves deterministically.  
-4. Ground truth injected into context.  
-5. Model reasons using controlled knowledge.
-
----
-
-## What This PoC Demonstrates
-
-- Deterministic symbolic lookup  
-- Separation of reasoning and truth layers  
-- Protocol‑based knowledge access  
-- Minimal infrastructure footprint  
-
----
-
-## What This Is NOT
-
-- a full memory system  
-- a vector database replacement  
-- a knowledge graph engine  
-- production‑ready storage  
-
----
-
-## In One Sentence
-
-AI models reason probabilistically.  
-Systems still need something that does not.
-
----
-
-## License
-
-This project is released under the **Business Source License (BUSL)**.
-
-### What this means
-
-You are free to:
-
-- use the software for personal and internal purposes  
-- experiment, evaluate, and prototype freely  
-- build non-commercial integrations  
-
-Commercial use requires a separate license.
-
-The intent is to:
-
-- enable broad experimentation and adoption  
-- protect the long-term sustainability of the project  
-- prevent uncredited commercial cloning  
-
-See the LICENSE file for full terms.
+Author: Aki Hirvilammi
