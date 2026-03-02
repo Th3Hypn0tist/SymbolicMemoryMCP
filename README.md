@@ -1,12 +1,8 @@
 # SymbolicMemoryMCP
 
-**A Deterministic Symbolic Memory Layer for LLM Systems**
+## A Deterministic Knowledge Layer for LLM Systems
 
-------------------------------------------------------------------------
-
-## Why This Exists
-
-Most modern AI systems rely on probabilistic recall.
+Most AI systems today rely on **probabilistic recall**.
 
 They can retrieve similar information, but they cannot reliably:
 
@@ -15,197 +11,147 @@ They can retrieve similar information, but they cannot reliably:
 -   provide auditability\
 -   separate truth from interpretation
 
-RAG improves retrieval, but it does not solve the core problem:
+RAG improves retrieval --- but it does not solve the core problem:
 
-> AI systems still lack a deterministic knowledge backbone.
+> **AI systems still lack a deterministic knowledge backbone.**
 
-This project demonstrates a minimal approach to solving that problem.
+This project demonstrates a minimal approach to solving that gap.
 
 ------------------------------------------------------------------------
 
-## What This Is
+## The Core Insight
+
+Traditional AI memory works like this:
+
+Store text → Inject into prompt → Model interprets probabilistically
+
+Symbolic memory works differently:
+
+Query → Deterministic identity lookup → Resolve ground truth → Inject
+just-in-time
+
+The key distinction:
+
+> **Memory is not stored context.\
+> Memory is context resolved from ground truth.**
+
+------------------------------------------------------------------------
+
+## What This Project Is
 
 **SymbolicMemoryMCP** is a Proof-of-Concept implementation of a
 deterministic symbolic memory layer for AI systems.
 
 It shows how knowledge can be:
 
--   stored explicitly as symbols\
--   resolved deterministically\
--   injected into AI workflows just-in-time\
--   accessed through a simple protocol interface
+-   represented explicitly as symbols\
+-   resolved deterministically by identity\
+-   accessed through a protocol interface (MCP)\
+-   injected into AI workflows just-in-time
 
-Instead of putting "memory inside the model", this approach treats
-memory as infrastructure.
-
-------------------------------------------------------------------------
-
-## Core Idea
-
-Traditional AI memory works like this:
-
-Memory → stored text → injected into prompt → interpreted
-probabilistically
-
-Symbolic Memory works differently:
-
-Query → deterministic lookup → resolved ground truth → injected as
-context
-
-The key distinction:
-
-> Memory is not stored context --- it is context resolved from ground
-> truth.
+Instead of putting memory inside the model, this approach treats memory
+as **infrastructure**.
 
 ------------------------------------------------------------------------
 
 ## Architectural Role
 
-This system operates at a different layer than typical AI memory
-solutions.
+This operates at a different layer than typical AI memory systems.
 
-  System Type                                      Role
-  ------------------------------------------------ -----------------------------------
-  Assistant memory (e.g. session/project memory)   Stores past context
-  RAG / vector databases                           Retrieve similar information
-  SymbolicMemoryMCP                                Provides deterministic invariants
+  Layer                  Purpose
+  ---------------------- -----------------------------------
+  Assistant memory       Stores session context
+  Vector / RAG systems   Retrieve similar information
+  **Symbolic Memory**    Provides deterministic invariants
 
-Symbolic Memory does not replace RAG or assistant memory.
+Symbolic memory does not replace RAG or context memory.
 
-It complements them by acting as the system knowledge backbone.
+It complements them by acting as the **system knowledge backbone**.
 
 ------------------------------------------------------------------------
 
-## Deterministic vs Probabilistic Memory
+## Identity vs Similarity
 
-A critical distinction:
+This distinction is critical:
 
-**Vector-based memory** - similarity-based - fuzzy recall -
-probabilistic resolution
+### Vector Memory
 
-**Symbolic memory** - identity-based - invariant - deterministic
-resolution
+-   similarity-based\
+-   fuzzy recall\
+-   probabilistic
 
-This enables AI systems to maintain a clear separation between:
+### Symbolic Memory
 
--   reasoning (probabilistic)\
--   facts (deterministic)
+-   identity-based\
+-   invariant\
+-   deterministic
+
+This enables a clean separation between:
+
+-   probabilistic reasoning\
+-   deterministic truth
+
+------------------------------------------------------------------------
+
+## What Makes This Deterministic
+
+Symbols resolve by identity --- not similarity.
+
+This guarantees:
+
+-   invariant grounding\
+-   explicit knowledge boundaries\
+-   reproducible resolution\
+-   auditability
 
 ------------------------------------------------------------------------
 
 ## Technology-Neutral by Design
 
-This project demonstrates an architectural pattern, not a specific
-technology stack.
+This is an architectural pattern, not a specific stack.
 
-The symbolic memory layer can be implemented using many storage
-backends:
+The symbolic layer can be implemented using:
 
 -   key-value stores\
 -   relational databases\
 -   graph databases\
 -   embedded storage\
--   cloud or local environments
-
-The PoC uses a minimal structure to illustrate the concept clearly.
+-   cloud or local runtimes
 
 ------------------------------------------------------------------------
 
-## Relationship to JIT Symbolic Memory Design Pattern
+## Relationship to the JIT Symbolic Memory Design Pattern
 
-This repository is a Proof of Concept inspired by the JIT Symbolic
-Memory design pattern.
+This repository is a **Proof of Concept (PoC)** implementation inspired
+by the **JIT Symbolic Memory** design pattern.
 
-The design pattern itself is conceptual and intentionally
-non-prescriptive.
+It is important to understand the distinction:
 
-This project represents:
+-   The design pattern defines **architectural principles**.
+-   This project demonstrates **one minimal technical realization** of
+    those principles.
 
--   one minimal technical realization\
--   not the pattern definition\
--   not a reference architecture
+The JIT Symbolic Memory document itself is explicitly conceptual and
+intentionally non-prescriptive.
 
-Its purpose is to make the architectural idea concrete and testable.
+This repository should be read as:
 
-------------------------------------------------------------------------
+> A practical illustration of how a deterministic symbolic memory layer
+> can be built and integrated into an AI system using a simple protocol
+> interface.
 
-## Example Workflow (Conceptual)
-
-1.  An AI system needs a known invariant.
-2.  It queries the symbolic memory layer via MCP.
-3.  The system resolves the symbol deterministically.
-4.  The resolved knowledge is injected into context.
-5.  The model reasons with grounded facts.
-
-------------------------------------------------------------------------
-
-## What This PoC Demonstrates
-
--   Deterministic symbolic lookup
--   Separation of reasoning and truth layers
--   Protocol-based knowledge access
--   Minimal infrastructure footprint
-
-It intentionally avoids complexity to keep the architectural role clear.
-
-------------------------------------------------------------------------
-
-## What This Is NOT
-
-This is not:
-
--   a full memory system
--   a vector database alternative
--   a knowledge graph framework
--   a production-ready storage engine
-
-It is a minimal demonstration of an architectural missing layer.
-
-------------------------------------------------------------------------
-
-## The Larger Insight
-
-Modern AI stacks typically include:
-
--   models
--   vector retrieval
--   prompt orchestration
-
-What is still missing is:
-
-> A deterministic knowledge layer that AI systems can rely on as ground
-> truth.
-
-SymbolicMemoryMCP illustrates how that layer can be implemented.
+It represents **one possible implementation path**, not the pattern
+itself.
 
 ------------------------------------------------------------------------
 
 ## Status
 
-This is an early Proof-of-Concept intended for:
-
--   experimentation
--   architectural discussion
--   integration exploration
+Early Proof-of-Concept for experimentation and architectural discussion.
 
 ------------------------------------------------------------------------
 
-## License
-
-BUSL (Business Source License) --- see LICENSE file for details.
-
-------------------------------------------------------------------------
-
-## Contributing & Feedback
-
-Discussion and experimentation are welcome.
-
-This project is primarily intended to explore the architectural role of
-deterministic symbolic memory in AI systems.
-
-------------------------------------------------------------------------
-
-**In short:**
+## In One Sentence
 
 AI models reason probabilistically.\
-Systems still need something that is not.
+Systems still need something that does not.
